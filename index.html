@@ -11,14 +11,13 @@
 <header class="top">
   <div class="wrap">
     <h1>Resumen por punto de venta</h1>
-    <p>Facturado vs. pagado · propinas · fechas con error · % de errores por punto</p>
+    <p>Facturado vs. pagado · propinas · diferencias por día · % de errores por punto</p>
   </div>
 </header>
 
 <main class="wrap">
   <div id="error" class="error" hidden></div>
 
-  <!-- Cargador -->
   <section id="loader" class="loader">
     <div id="drop" class="drop">
       <div class="drop-icon">📄</div>
@@ -30,7 +29,6 @@
     </div>
   </section>
 
-  <!-- Aplicación -->
   <section id="app" hidden>
     <div class="cards" id="cards"></div>
 
@@ -45,8 +43,8 @@
 
     <p class="note">
       Un día cuenta como error cuando la diferencia total
-      (<strong>venta bruta − venta pagada</strong>) no es cero.
-      Haz clic en una fila para ver el detalle día a día.
+      (<strong>venta bruta − venta pagada</strong>) no es cero. Las fechas con error se
+      muestran debajo del contador en la columna <em>“Días error”</em>.
     </p>
 
     <div class="table-wrap">
@@ -55,8 +53,7 @@
           <tr>
             <th data-sort="pdv">Punto de venta</th>
             <th data-sort="diasCount" class="dias" title="Días distintos en que registra movimiento">Días</th>
-            <th data-sort="diasConError" class="num" title="Días donde la diferencia total no es cero">Días error</th>
-            <th class="errdias" title="Fechas exactas en que la diferencia total no fue cero">Fechas con error</th>
+            <th data-sort="diasConError" class="num" title="Días donde la diferencia total no es cero (se listan las fechas debajo)">Días error</th>
             <th data-sort="pctError" class="num" title="Días con error / días totales">% error</th>
             <th data-sort="registros" class="num">Registros</th>
             <th data-sort="ventaPagada" class="num" title="Suma de la columna venta_pagada">Venta pagada</th>
@@ -74,6 +71,6 @@
   </section>
 </main>
 
-<script src="script.js.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
