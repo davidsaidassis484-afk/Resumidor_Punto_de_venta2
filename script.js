@@ -12,8 +12,8 @@
     return (v * 100).toFixed(1).replace('.', ',') + ' %';
   }
 
+  /** Un día es error si la diferencia total (facturado - pagado) no es cero */
   function esErrorDia(d) {
-    // Un día es error si la diferencia total (facturado - pagado) no es cero.
     return Math.abs(d.difTotal) > 0.5;
   }
 
@@ -103,6 +103,7 @@
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 800);
   }
 
+  /* ---------- Estado ---------- */
   const state = {
     groups: [],
     q: '',
@@ -111,9 +112,7 @@
     fileName: ''
   };
 
-  /* =========================================================
-     Carga y agrupación
-     ========================================================= */
+  /* ---------- Carga y agrupación ---------- */
   function loadData(text, fileName) {
     text = String(text).replace(/^\uFEFF/, '');
     const delim = detectDelim(text);
@@ -154,10 +153,7 @@
 
       let g = map.get(pdv);
       if (!g) {
-        g = {
-          pdv, dias: new Map(),
-          registros: 0, ventaPagada: 0, propinaPagada: 0, ventaBruta: 0, totalPagado: 0
-        };
+        g = { pdv, dias: new Map(), registros: 0, ventaPagada: 0, propinaPagada: 0, ventaBruta: 0, totalPagado: 0 };
         map.set(pdv, g);
       }
       g.registros++;
@@ -180,26 +176,23 @@
 
     if (!map.size) throw new Error('No se encontraron filas válidas con punto de venta y fecha.');
 
+    /* Cálculos agregados + lista de fechas con error */
     state.groups = [...map.values()].map(g => {
-      g.diasCount       = g.dias.size;
       g.diasList        = [...g.dias.keys()].sort();
+      g.diasCount       = g.diasList.length;
       g.difVentaPropina = g.ventaPagada - g.propinaPagada;
       g.difTotal        = g.ventaBruta - g.ventaPagada;
-      g.diasConError    = 0;
       g.diasErrorList   = [];
 
       for (const d of g.dias.values()) {
         d.difVentaPropina = d.ventaPagada - d.propinaPagada;
         d.difTotal        = d.ventaBruta - d.ventaPagada;
         d.esError         = esErrorDia(d);
-        if (d.esError) {
-          g.diasConError++;
-          g.diasErrorList.push(d.dia);
-        }
+        if (d.esError) g.diasErrorList.push(d.dia);
       }
-
       g.diasErrorList.sort();
-      g.pctError = g.diasCount ? g.diasConError / g.diasCount : 0;
+      g.diasConError = g.diasErrorList.length;
+      g.pctError     = g.diasCount ? g.diasConError / g.diasCount : 0;
       return g;
     });
 
@@ -215,9 +208,7 @@
     render();
   }
 
-  /* =========================================================
-     Filtro / orden / totales
-     ========================================================= */
+  /* ---------- Filtro / orden / totales ---------- */
   function getRows() {
     const q = state.q;
     let list = state.groups.filter(g => !q || g.pdv.toLowerCase().indexOf(q) > -1);
@@ -239,8 +230,7 @@
       totalPagado: 0,
       dias: new Set(),
       pdvDias: 0,
-      diasConError: 0,
-      errorDates: new Set()
+      diasConError: 0
     };
 
     for (const g of rows) {
@@ -252,7 +242,6 @@
       t.pdvDias       += g.diasCount;
       t.diasConError  += g.diasConError;
       for (const d of g.diasList) t.dias.add(d);
-      for (const d of g.diasErrorList) t.errorDates.add(d);
     }
 
     t.difVentaPropina = t.ventaPagada - t.propinaPagada;
@@ -261,28 +250,36 @@
     return t;
   }
 
-  /* =========================================================
-     Render
-     ========================================================= */
+  /* ---------- Render ---------- */
   function cellDif(v) {
     return '<td class="num' + (v < 0 ? ' neg' : '') + '">' + money(v) + '</td>';
-  }
-
-  function chipsError(dias) {
-    if (!dias || !dias.length) return '<span class="chip-ok">—</span>';
-    return dias.map(d => '<span class="chip-err">' + esc(fmtDiaCorto(d)) + '</span>').join('');
   }
 
   function rowHTML(g) {
     const open = state.expanded.has(g.pdv);
     const diasTxt = g.diasList.map(fmtDiaCorto).join(' · ');
+    const errTxt  = g.diasErrorList.map(fmtDiaCorto).join(' · ');
+
+    /* Columna "Días error": contador + listado de fechas con error */
+    let errCell;
+    if (g.diasConError > 0) {
+      errCell =
+        '<span class="badge err" title="' + g.diasConError + ' día(s) con error">' +
+          g.diasConError +
+        '</span>' +
+        '<span class="sub-dias err" title="' +
+          esc(g.diasErrorList.map(fmtDia).join(', ')) +
+        '">' + esc(errTxt) + '</span>';
+    } else {
+      errCell = '<span class="badge ok">0</span>';
+    }
 
     let html =
       '<tr class="main' + (open ? ' open' : '') + '" data-pdv="' + esc(g.pdv) + '">' +
         '<td class="pdv"><span class="caret">' + (open ? '▾' : '▸') + '</span>' + esc(g.pdv) + '</td>' +
-        '<td class="dias"><span class="badge">' + g.diasCount + '</span><span class="sub-dias">' + esc(diasTxt) + '</span></td>' +
-        '<td class="num">' + g.diasConError + '</td>' +
-        '<td class="errdias">' + chipsError(g.diasErrorList) + '</td>' +
+        '<td class="dias"><span class="badge">' + g.diasCount + '</span>' +
+          '<span class="sub-dias">' + esc(diasTxt) + '</span></td>' +
+        '<td class="num">' + errCell + '</td>' +
         '<td class="num' + (g.pctError > 0 ? ' pct-pos' : '') + '">' + pctFmt(g.pctError) + '</td>' +
         '<td class="num">' + g.registros + '</td>' +
         '<td class="num strong">' + money(g.ventaPagada) + '</td>' +
@@ -316,7 +313,7 @@
         '</tr>';
     }
 
-    return '<tr class="detail"><td colspan="12"><div class="detail-wrap">' +
+    return '<tr class="detail"><td colspan="11"><div class="detail-wrap">' +
       '<div class="detail-title">Detalle por día — ' + esc(g.pdv) + '</div>' +
       '<table class="sub"><thead><tr>' +
         '<th>Día</th><th>Error</th><th class="num">Registros</th><th class="num">Venta pagada</th>' +
@@ -328,16 +325,10 @@
 
   function totalsRowHTML(rows) {
     const t = totals(rows);
-    const errDates = [...t.errorDates].sort();
-    const errCell = errDates.length
-      ? errDates.map(d => '<span class="chip-err">' + esc(fmtDiaCorto(d)) + '</span>').join('')
-      : '<span class="chip-ok">—</span>';
-
     return '<tr>' +
       '<td>TOTAL (' + rows.length + ' punto' + (rows.length === 1 ? '' : 's') + ')</td>' +
       '<td class="dias">' + t.pdvDias + '</td>' +
       '<td class="num">' + t.diasConError + '</td>' +
-      '<td class="errdias">' + errCell + '</td>' +
       '<td class="num' + (t.pctError > 0 ? ' pct-pos' : '') + '">' + pctFmt(t.pctError) + '</td>' +
       '<td class="num">' + t.registros + '</td>' +
       '<td class="num">' + money(t.ventaPagada) + '</td>' +
@@ -382,7 +373,7 @@
 
     tbody.innerHTML = rows.length
       ? rows.map(rowHTML).join('')
-      : '<tr><td colspan="12" class="empty">No hay puntos de venta que coincidan con la búsqueda.</td></tr>';
+      : '<tr><td colspan="11" class="empty">No hay puntos de venta que coincidan con la búsqueda.</td></tr>';
 
     $('#tfoot').innerHTML = rows.length ? totalsRowHTML(rows) : '';
 
@@ -399,9 +390,7 @@
     updateSortIndicators();
   }
 
-  /* =========================================================
-     Exportar CSV
-     ========================================================= */
+  /* ---------- Exportar CSV ---------- */
   function csvCell(v) {
     const s = String(v == null ? '' : v);
     return /[",;\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
@@ -416,8 +405,9 @@
 
     lines.push(csvCell('RESUMEN POR PUNTO DE VENTA'));
     lines.push([
-      'Punto de venta', 'Días', 'Días con error', 'Fechas con error', '% error', 'Fechas',
-      'Registros', 'Venta pagada', 'Propina pagada', 'Dif. venta - propina',
+      'Punto de venta', 'Días', 'Días con error', 'Fechas con error', '% error',
+      'Fechas', 'Registros',
+      'Venta pagada', 'Propina pagada', 'Dif. venta - propina',
       'Venta bruta', 'Diferencia total', 'Total pagado'
     ].map(csvCell).join(','));
 
@@ -443,7 +433,7 @@
       'TOTAL',
       t.pdvDias,
       t.diasConError,
-      [...t.errorDates].sort().map(fmtDia).join(' | '),
+      '',
       pctFmt(t.pctError),
       '',
       t.registros,
@@ -485,9 +475,7 @@
     download(blob, 'resumen-puntos-de-venta.csv');
   }
 
-  /* =========================================================
-     Exportar Word
-     ========================================================= */
+  /* ---------- Exportar Word ---------- */
   function exportWord() {
     const rows = getRows();
     if (!rows.length) { alert('No hay datos para exportar.'); return; }
@@ -510,9 +498,8 @@
       'th,td{border:0.5pt solid #9aa5b1;padding:3pt 5pt;font-size:8.5pt;vertical-align:top;}' +
       'th{background:#e6f2f0;text-align:left;}' +
       'td.n{text-align:right;}' +
-      'td.err{color:#991b1b;font-weight:bold;}' +
+      'td.err{color:#b91c1c;font-weight:bold;}' +
       'tr.tot td{font-weight:bold;background:#f1f5f9;}' +
-      'tr.errrow td{background:#fef2f2;}' +
       '.small{font-size:8pt;color:#666;font-weight:normal;}' +
       '</style></head><body>';
 
@@ -523,6 +510,7 @@
       ' · Días únicos: ' + dias.length + (dias.length ? ' (' + dias.map(fmtDia).join(', ') + ')' : '') +
       ' · Valores en COP</p>';
 
+    /* Tabla resumen */
     html += '<h2>Resumen general</h2><table><thead><tr>' +
       '<th>Punto de venta</th><th>Días</th><th>Días error</th><th>Fechas con error</th><th>% error</th>' +
       '<th>Registros</th><th>Venta pagada</th><th>Propina pagada</th>' +
@@ -530,14 +518,13 @@
       '<th>Diferencia total</th><th>Total pagado</th></tr></thead><tbody>';
 
     rows.forEach(g => {
-      const fechasErr = g.diasErrorList.length
-        ? g.diasErrorList.map(fmtDia).join(', ')
-        : '—';
       html += '<tr>' +
         '<td>' + esc(g.pdv) + '</td>' +
         '<td class="n">' + g.diasCount + '</td>' +
         '<td class="n">' + g.diasConError + '</td>' +
-        '<td class="' + (g.diasErrorList.length ? 'err' : '') + '">' + esc(fechasErr) + '</td>' +
+        '<td' + (g.diasConError ? ' class="err"' : '') + '>' +
+          (g.diasErrorList.length ? g.diasErrorList.map(fmtDia).join(', ') : '—') +
+        '</td>' +
         '<td class="n">' + pctFmt(g.pctError) + '</td>' +
         '<td class="n">' + g.registros + '</td>' +
         '<td class="n">' + money(g.ventaPagada) + '</td>' +
@@ -549,11 +536,10 @@
         '</tr>';
     });
 
-    const errDatesTot = [...t.errorDates].sort();
     html += '<tr class="tot"><td>TOTAL</td>' +
       '<td class="n">' + t.pdvDias + '</td>' +
       '<td class="n">' + t.diasConError + '</td>' +
-      '<td class="err">' + (errDatesTot.length ? errDatesTot.map(fmtDia).join(', ') : '—') + '</td>' +
+      '<td></td>' +
       '<td class="n">' + pctFmt(t.pctError) + '</td>' +
       '<td class="n">' + t.registros + '</td>' +
       '<td class="n">' + money(t.ventaPagada) + '</td>' +
@@ -564,15 +550,14 @@
       '<td class="n">' + money(t.totalPagado) + '</td></tr>';
     html += '</tbody></table>';
 
+    /* Detalle por día */
     html += '<h2>Detalle por punto de venta y día</h2>';
 
     rows.forEach(g => {
       html += '<h3>' + esc(g.pdv) + ' <span class="small">(' + g.diasCount +
         (g.diasCount === 1 ? ' día' : ' días') + ' · ' + g.registros +
         ' registros · ' + g.diasConError + ' día(s) con error · ' +
-        pctFmt(g.pctError) + ')' +
-        (g.diasErrorList.length ? ' — Errores: ' + g.diasErrorList.map(fmtDia).join(', ') : '') +
-        '</span></h3>';
+        pctFmt(g.pctError) + ')</span></h3>';
 
       html += '<table><thead><tr><th>Día</th><th>Error</th><th>Registros</th>' +
         '<th>Venta pagada</th><th>Propina pagada</th><th>Dif. venta − propina</th>' +
@@ -580,9 +565,9 @@
         '</tr></thead><tbody>';
 
       [...g.dias.values()].sort((a, b) => a.dia.localeCompare(b.dia)).forEach(d => {
-        html += '<tr class="' + (d.esError ? 'errrow' : '') + '">' +
+        html += '<tr>' +
           '<td>' + fmtDia(d.dia) + '</td>' +
-          '<td>' + (d.esError ? 'Sí' : 'No') + '</td>' +
+          '<td' + (d.esError ? ' class="err"' : '') + '>' + (d.esError ? 'Sí' : 'No') + '</td>' +
           '<td class="n">' + d.registros + '</td>' +
           '<td class="n">' + money(d.ventaPagada) + '</td>' +
           '<td class="n">' + money(d.propinaPagada) + '</td>' +
@@ -606,9 +591,7 @@
       'resumen-puntos-de-venta.doc');
   }
 
-  /* =========================================================
-     Eventos
-     ========================================================= */
+  /* ---------- Lector de archivo ---------- */
   function readFile(file) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -628,6 +611,7 @@
     reader.readAsText(file, 'UTF-8');
   }
 
+  /* ---------- Inicialización ---------- */
   function init() {
     const drop = $('#drop');
     const fileInput = $('#file');
