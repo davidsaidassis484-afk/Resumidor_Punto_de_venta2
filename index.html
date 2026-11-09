@@ -1,86 +1,79 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resumen por punto de venta</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resumen por punto de venta</title>
+<link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
-    <header class="top">
-        <div class="wrap">
-            <h1>Resumen por punto de venta</h1>
-            <p>Facturado vs. pagado · propinas · diferencias por día · % de errores por punto</p>
-        </div>
-    </header>
+<header class="top">
+  <div class="wrap">
+    <h1>Resumen por punto de venta</h1>
+    <p>Facturado vs. pagado · propinas · fechas con error · % de errores por punto</p>
+  </div>
+</header>
 
-    <main class="wrap">
-        <div id="error" class="error" hidden></div>
+<main class="wrap">
+  <div id="error" class="error" hidden></div>
 
-        <section id="loader" class="loader">
-            <div id="drop" class="drop">
-                <div class="drop-icon">📄</div>
-                <h2>Arrastra aquí el archivo CSV</h2>
-                <p>o</p>
-                <label class="btn primary" for="file">Seleccionar archivo</label>
-                <input id="file" type="file" accept=".csv,text/csv" hidden>
-                <p class="hint">Todo se procesa en tu navegador. Ningún dato se sube a internet.</p>
-            </div>
-        </section>
+  <!-- Cargador -->
+  <section id="loader" class="loader">
+    <div id="drop" class="drop">
+      <div class="drop-icon">📄</div>
+      <h2>Arrastra aquí el archivo CSV</h2>
+      <p>o</p>
+      <label class="btn primary" for="file">Seleccionar archivo</label>
+      <input id="file" type="file" accept=".csv,text/csv" hidden>
+      <p class="hint">Todo se procesa en tu navegador. Ningún dato se sube a internet.</p>
+    </div>
+  </section>
 
-        <section id="app" hidden>
-            <div class="cards" id="cards"></div>
+  <!-- Aplicación -->
+  <section id="app" hidden>
+    <div class="cards" id="cards"></div>
 
-            <div class="toolbar">
-                <input id="search" type="search" placeholder="Buscar punto de venta…" autocomplete="off">
-                <div class="spacer"></div>
-                <button id="btnCsv" class="btn" type="button">⬇ Exportar CSV</button>
-                <button id="btnWord" class="btn" type="button">⬇ Exportar Word</button>
-                <label class="btn ghost" for="file2">Cargar otro CSV</label>
-                <input id="file2" type="file" accept=".csv,text/csv" hidden>
-            </div>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Buscar punto de venta…" autocomplete="off">
+      <div class="spacer"></div>
+      <button id="btnCsv" class="btn" type="button">⬇ Exportar CSV</button>
+      <button id="btnWord" class="btn" type="button">⬇ Exportar Word</button>
+      <label class="btn ghost" for="file2">Cargar otro CSV</label>
+      <input id="file2" type="file" accept=".csv,text/csv" hidden>
+    </div>
 
-            <p class="note">
-                Un día cuenta como error cuando la diferencia total
-                (<strong>venta bruta - venta pagada</strong>) no es cero.
-            </p>
+    <p class="note">
+      Un día cuenta como error cuando la diferencia total
+      (<strong>venta bruta − venta pagada</strong>) no es cero.
+      Haz clic en una fila para ver el detalle día a día.
+    </p>
 
-            <div class="table-wrap">
-                <table id="tabla">
-                    <thead>
-                        <tr>
-                            <th data-sort="pdv">Punto de venta</th>
-                            <th data-sort="diasCount" class="dias" title="Días distintos en que registra movimiento">
-                                Días</th>
-                            <th data-sort="diasConError" class="num" title="Días donde la diferencia total no es cero">
-                                Días error</th>
-                            <th data-sort="pctError" class="num" title="Días con error / días totales">% error</th>
-                            <th data-sort="registros" class="num">Registros</th>
-                            <th data-sort="ventaPagada" class="num" title="Suma de la columna venta_pagada">Venta pagada
-                            </th>
-                            <th data-sort="propinaPagada" class="num" title="Suma de la columna propina_pagada">Propina
-                                pagada</th>
-                            <th data-sort="difVentaPropina" class="num" title="Venta pagada − Propina pagada">Dif. venta
-                                − propina</th>
-                            <th data-sort="ventaBruta" class="num" title="Suma de la columna venta_bruta (facturado)">
-                                Venta bruta (facturado)</th>
-                            <th data-sort="difTotal" class="num" title="Venta bruta − Venta pagada">Diferencia total
-                            </th>
-                            <th data-sort="totalPagado" class="num" title="Suma de la columna total_pagado">Total pagado
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody"></tbody>
-                    <tfoot id="tfoot"></tfoot>
-                </table>
-            </div>
-        </section>
-    </main>
+    <div class="table-wrap">
+      <table id="tabla">
+        <thead>
+          <tr>
+            <th data-sort="pdv">Punto de venta</th>
+            <th data-sort="diasCount" class="dias" title="Días distintos en que registra movimiento">Días</th>
+            <th data-sort="diasConError" class="num" title="Días donde la diferencia total no es cero">Días error</th>
+            <th class="errdias" title="Fechas exactas en que la diferencia total no fue cero">Fechas con error</th>
+            <th data-sort="pctError" class="num" title="Días con error / días totales">% error</th>
+            <th data-sort="registros" class="num">Registros</th>
+            <th data-sort="ventaPagada" class="num" title="Suma de la columna venta_pagada">Venta pagada</th>
+            <th data-sort="propinaPagada" class="num" title="Suma de la columna propina_pagada">Propina pagada</th>
+            <th data-sort="difVentaPropina" class="num" title="Venta pagada − Propina pagada">Dif. venta − propina</th>
+            <th data-sort="ventaBruta" class="num" title="Suma de la columna venta_bruta (facturado)">Venta bruta (facturado)</th>
+            <th data-sort="difTotal" class="num" title="Venta bruta − Venta pagada">Diferencia total</th>
+            <th data-sort="totalPagado" class="num" title="Suma de la columna total_pagado">Total pagado</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+  </section>
+</main>
 
-    <script src="script.js"></script>
+<script src="app.js"></script>
 </body>
-
 </html>
